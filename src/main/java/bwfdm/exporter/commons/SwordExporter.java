@@ -216,8 +216,6 @@ public abstract class SwordExporter {
 	 *
 	 * @param authCredentials {@link AuthCredentials} object. To create it please use the following methods: ...
 	 *
-	 * TODO: add 2 methods to create an AuthCredentials object (for user/password and for API-token) and make link above
-	 *
 	 */
 	protected SwordExporter(AuthCredentials authCredentials) {
 		swordClient = new SWORDClient();

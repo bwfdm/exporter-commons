@@ -25,8 +25,6 @@ import java.util.Map;
 
 public interface ExportRepository {
 	
-	//TODO: use this interface as a common interface for each export repository. Move it to package with SwordExporter.
-	
 	/**
 	 * Check if export repository is accessible via API.
 	 * 
