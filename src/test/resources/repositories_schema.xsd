@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+               
+<xsd:element name="configList">
+<xsd:complexType>
+    <xsd:sequence>
+        <xsd:element name="repoConfig" maxOccurs="unbounded">
+		    <xsd:complexType>		       
+		       <xsd:sequence>
+		           
+		           <xsd:element name="serviceDocumentUrl" type="xsd:string" /> 
+		           <!-- e.g. "https://some-repository.com/swordv2/servicedocument" -->
+                   
+                   <xsd:element name="metadataReplacementEntryUrl" type="xsd:string" /> 
+                   <!-- e.g. "https://some-repository.com/swordv2/collection/12345/1" -->
+                   
+                   <xsd:element name="adminUser" type="xsd:string" />
+		           <xsd:element name="normalUser" type="xsd:string" />
+		          
+		       </xsd:sequence>
+           </xsd:complexType>
+        </xsd:element>    
+    </xsd:sequence>
+</xsd:complexType>    
+</xsd:element>
+
+</xsd:schema> 

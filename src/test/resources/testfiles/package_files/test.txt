@@ -1,0 +1,2 @@
+Test publicaton. Text file.
+Hello DSpace!

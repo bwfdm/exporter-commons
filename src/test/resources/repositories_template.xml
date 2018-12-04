@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+
+<!-- 
+
+  This is a template file.
+  
+  Please save this file in the same directory as "repositories.xml"
+  and fill in some proper URLs and credentials
+    
+  !! IMPORTANT !!
+  
+  Please check the ".gitignore" file to be sure, 
+  that "repositories.xml" is there. 
+  It prevents the upload of your credentials to some public git-server.
+   
+ -->
+<configList>
+    
+    <repoConfig>
+        <serviceDocumentUrl>https://some-repository-1.org/swordv2/servicedocument</serviceDocumentUrl>
+        <metadataReplacementEntryUrl>http://some-repository-1.org/swordv2/collection/12345/1</metadataReplacementEntryUrl>
+        <adminUser>some-admin-user@e-mail.com</adminUser>
+        <normalUser>some-normal-user@e-mail.com</normalUser>
+    </repoConfig>
+    
+    <!-- 
+    
+     If the second repository is not needed, please remove it.
+    
+     -->
+    
+    <repoConfig>
+        <serviceDocumentUrl>https://some-repository-2.org/swordv2/servicedocument</serviceDocumentUrl>
+        <metadataReplacementEntryUrl>https://some-repository-2.org/swordv2/collection/12345/1</metadataReplacementEntryUrl>
+        <adminUser>some-admin-user@e-mail.com</adminUser>
+        <normalUser>some-normal-user@e-mail.com</normalUser>
+    </repoConfig>
+    
+    <!-- 
+    
+     Please add more repositories if needed.
+        
+     -->
+    
+</configList>
