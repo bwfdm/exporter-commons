@@ -16,30 +16,46 @@
  -->
 <configList>
     
-    <repoConfig>
-        <serviceDocumentUrl>https://some-repository-1.org/swordv2/servicedocument</serviceDocumentUrl>
-        <metadataReplacementEntryUrl>http://some-repository-1.org/swordv2/collection/12345/1</metadataReplacementEntryUrl>
-        <adminUser>some-admin-user@e-mail.com</adminUser>
-        <normalUser>some-normal-user@e-mail.com</normalUser>
-    </repoConfig>
-    
     <!-- 
-    
-     If the second repository is not needed, please remove it.
-    
+     Example with on-behalf-of option (DSpace).
      -->
-    
     <repoConfig>
-        <serviceDocumentUrl>https://some-repository-2.org/swordv2/servicedocument</serviceDocumentUrl>
-        <metadataReplacementEntryUrl>https://some-repository-2.org/swordv2/collection/12345/1</metadataReplacementEntryUrl>
+        <serviceDocumentUrl>https://some-dspace-repository-1.org/swordv2/servicedocument</serviceDocumentUrl>
+        <metadataReplacementEntryUrl>http://some-dspace-repository-1.org/swordv2/edit/entry_id</metadataReplacementEntryUrl>
         <adminUser>some-admin-user@e-mail.com</adminUser>
         <normalUser>some-normal-user@e-mail.com</normalUser>
     </repoConfig>
     
-    <!-- 
     
+    <!-- 
+     Example with normal user only (DSpace). Admin user must be empty.
+     
+     If repository is not needed, please remove it.
+     -->
+    <repoConfig>
+        <serviceDocumentUrl>https://some-dspace-repository-2.org/swordv2/servicedocument</serviceDocumentUrl>
+        <metadataReplacementEntryUrl>https://some-dspace-repository-2.org/swordv2/edit/entry_id</metadataReplacementEntryUrl>
+        <adminUser></adminUser>
+        <normalUser>some-normal-user@e-mail.com</normalUser>
+    </repoConfig>
+    
+    
+    <!-- 
+     Example with API-token (Dataverse). Admin user and normal user must be empty.
+     
+     If repository is not needed, please remove it.
+     -->
+    <repoConfig>
+        <serviceDocumentUrl>https://some-dataverse-repository.org/dvn/api/data-deposit/v1.1/swordv2/service-document</serviceDocumentUrl>
+        <metadataReplacementEntryUrl>https://some-dataverse-repository.org/dvn/api/data-deposit/v1.1/swordv2/edit/entry_doi</metadataReplacementEntryUrl>
+        <adminUser></adminUser>
+        <normalUser></normalUser>
+    </repoConfig>
+    
+    
+    <!-- 
      Please add more repositories if needed.
-        
      -->
+    
     
 </configList>
