@@ -227,6 +227,8 @@ public abstract class SwordExporter {
 	 * Get available collections via SWORD v2 protocol based on the {@link ServiceDocument}.
 	 *
 	 * @param serviceDocument can be created via {@link #getServiceDocument(String) getServiceDocument(serviceDocumentURL)}
+	 * 			<p>
+	 * 			IMPORTANT: serviceDocument must be NON-{@code null}!
 	 * @return Map<String, String> where key = collection URL, value = collection title
 	 */
 	public Map<String, String> getCollections(ServiceDocument serviceDocument){
@@ -288,7 +290,10 @@ public abstract class SwordExporter {
 	}
 
 	/**
-	 * Check if SWORDv2-protocol is accessible
+	 * Check if SWORDv2 API is accessible with current authentication credentials.
+	 * <p>
+	 * IMPORTANT: credentials are used implicitly. Definition of the credentials is realized via the class constructor.
+	 *  
 	 * @param serviceDocumentURL string with the service document URL
 	 * @return {@code true} if SWORD API is accessible and {@code false} otherwise
 	 */
