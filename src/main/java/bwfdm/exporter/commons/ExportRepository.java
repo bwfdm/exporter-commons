@@ -100,7 +100,7 @@ public interface ExportRepository {
 	 * 
 	 * @return {@link String} with the URL of the new created entry or {@code null} in case of error.
 	 * 
-	 * @throws IOException
+	 * @throws IOException in case of IO error
 	 */
 	//TODO: activate in future releases
 	//TODO: differentiate between dublin core (DC) and METS formats
@@ -128,7 +128,7 @@ public interface ExportRepository {
 	 * 
 	 * @return {@link String} with the URL of the new created entry or {@code null} in case of error.
 	 * 
-	 * @throws IOException
+	 * @throws IOException in case of IO error
 	 */
 	public String exportNewEntryWithFileAndMetadata(String collectionURL, File file, 
 				boolean unpackFileIfArchive, Map<String, List<String>> metadataMap) throws IOException;
@@ -154,7 +154,7 @@ public interface ExportRepository {
 	 * 
 	 * @return {@link String} with the URL of the new created entry or {@code null} in case of error.
 	 * 
-	 * @throws IOException
+	 * @throws IOException in case of IO error
 	 */
 	//TODO: activate in future releases
 	//TODO: differentiate between dublin core (DC) and METS formats

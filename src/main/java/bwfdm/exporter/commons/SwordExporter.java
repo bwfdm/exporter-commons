@@ -229,7 +229,7 @@ public abstract class SwordExporter {
 	 * @param serviceDocument can be created via {@link #getServiceDocument(String) getServiceDocument(serviceDocumentURL)}
 	 * 			<p>
 	 * 			IMPORTANT: serviceDocument must be NON-{@code null}!
-	 * @return Map<String, String> where key = collection URL, value = collection title
+	 * @return {@code Map<String, String>} where key = collection URL, value = collection title
 	 */
 	public Map<String, String> getCollections(ServiceDocument serviceDocument){
 		requireNonNull(serviceDocument);
@@ -314,7 +314,7 @@ public abstract class SwordExporter {
 	 * 		  or a link to edit the collection ("Location" field in the response)
 	 * @param swordRequestType see {@link SwordRequestType}
 	 * @param mimeFormat String with e.g. {@code "application/atom+xml"} or {@code "application/zip"}, see {@link SwordRequestType}}
-	 * @param packageFormat {@code String} with the package format, see {@link UriRegistry.PACKAGE_SIMPLE_ZIP} or {@linkplain UriRegistry.PACKAGE_BINARY}
+	 * @param packageFormat {@code String} with the package format, see {@link UriRegistry#PACKAGE_SIMPLE_ZIP} or {@link UriRegistry#PACKAGE_BINARY}
 	 * @param file {@link File} for export
 	 * @param metadataMap {@link Map} of metadata for export
 	 *
@@ -329,10 +329,10 @@ public abstract class SwordExporter {
 	 *  	   only status code field is available, all other fields are {@code null} (e.g. "Location" field).
 	 *  	   In case of {@code SwordRequestType.DEPOSIT} request type such problems were not found.
 	 *  	   </pre>
-	 * @throws ProtocolViolationException
-	 * @throws SWORDError
-	 * @throws SWORDClientException
-	 * @throws FileNotFoundException
+	 * @throws ProtocolViolationException in case of SWORD error
+	 * @throws SWORDError in case of SWORD error 
+	 * @throws SWORDClientException in case of SWORD error
+	 * @throws FileNotFoundException in case of wrong file name
 	 *
 	 */
 	protected SwordResponse exportElement(String exportURL, SwordRequestType swordRequestType,
@@ -418,7 +418,7 @@ public abstract class SwordExporter {
 	 * 		<b>IMPORTANT for DSpace repository:</b> further update/extension of the media part (e.g. uploaded files)
 	 * 		via SWORD is not supported, only update of the metadata is allowed.
 	 * 
-	 * @throws SWORDClientException
+	 * @throws SWORDClientException in case of SWORD error
 	 */
 	public abstract String createEntryWithMetadata(String collectionURL, Map<String, List<String>> metadataMap) throws SWORDClientException;
 
@@ -446,8 +446,8 @@ public abstract class SwordExporter {
 	 * 		<b>IMPORTANT for DSpace repository:</b> further update/extension of the media part (e.g. uploaded files)
 	 * 		via SWORD is not supported, only update of the metadata is allowed.   
 	 *
-	 * @throws SWORDClientException
-	 * @throws IOException
+	 * @throws SWORDClientException in case of SWORD error
+	 * @throws IOException in case of IO error
 	 */
 	public abstract String createEntryWithMetadataAndFile(String collectionURL, File file, boolean unpackZip, Map<String, List<String>> metadataMap) throws IOException, SWORDClientException;
 
@@ -462,8 +462,8 @@ public abstract class SwordExporter {
 	 *
 	 * TODO: uncomment later. Think about - return location link as String (with "edit" substring inside)
 	 *
-	 * @throws IOException
-	 * @throws SWORDClientException
+	 * @throws IOException in case of IO error
+	 * @throws SWORDClientException in case of SWORD error
 	 */
 	//public abstract void exportFile(String url, File file) throws IOException, SWORDClientException;
 	
@@ -474,7 +474,7 @@ public abstract class SwordExporter {
 	 * @param entryUrl The URL which points to the metadata entry, includes "/swordv2/edit/" substring inside.
 	 * @param metadataMap The metadata that will replace the old metadata.
 	 * 
-	 * @throws SWORDClientException 
+	 * @throws SWORDClientException in case of SWORD error
 	 */
 	public void replaceMetadataEntry(String entryUrl, Map<String, List<String>> metadataMap) throws SWORDClientException {
 		try {
