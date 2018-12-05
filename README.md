@@ -13,19 +13,16 @@ Library with common classes and interfaces for the data export (e.g. to some rep
 ## How to use
 - if repository supports a SWORD protocol, the repository class should extend the [SwordExporter.java](src/main/java/bwfdm/exporter/commons/SwordExporter.java). 
 - if common interface for different repositories is needed, the repository class should implement the [ExportRepository.java](src/main/java/bwfdm/exporter/commons/ExportRepository.java)
-- (TODO for later) as an example could be a [DSpace connector](https://github.com/bwfdm/dspace-connector), especially the [DSpace_v6.java](https://github.com/bwfdm/dspace-connector/blob/master/src/main/java/bwfdm/connector/dspace/DSpace_v6.java) class. 
-
-## Features
-- ..
-- TODO
+<!--
+- (TODO: start to use SwordExporter in the DSpace connector) as an example could be a [DSpace connector](https://github.com/bwfdm/dspace-connector), especially the [DSpace_v6.java](https://github.com/bwfdm/dspace-connector/blob/master/src/main/java/bwfdm/connector/dspace/DSpace_v6.java) class. 
+-->
 
 ## Tests
-- ..
-- TODO
+- for test example see [SwordExporterTester.java](src\test\java\bwfdm\exporter\commons\test\SwordExporterTester.java)
+- for credentials input please see [repositories_schema.xsd](src\test\resources\repositories_schema.xsd) and [repositories_template.xml](src\test\resources\repositories_template.xml)
 
 ## Limitations
-- ..
-- TODO
+- currently SwordExporter supports metadata in DublinCore only as Map<String, List<String>>. Metadata as XML-file is NOT supported yet.
 
 ## Used third party libraries and their licenses
 - see [license-third-party.txt](license-third-party.txt)
