@@ -18,8 +18,8 @@ Library with common classes and interfaces for the data export (e.g. to some rep
 -->
 
 ## Tests
-- for test example see [SwordExporterTester.java](src\test\java\bwfdm\exporter\commons\test\SwordExporterTester.java)
-- for credentials input please see [repositories_schema.xsd](src\test\resources\repositories_schema.xsd) and [repositories_template.xml](src\test\resources\repositories_template.xml)
+- for test example see [SwordExporterTester.java](src/test/java/bwfdm/exporter/commons/test/SwordExporterTester.java)
+- for credentials input please see [repositories_schema.xsd](src/test/resources/repositories_schema.xsd) and [repositories_template.xml](src/test/resources/repositories_template.xml)
 
 ## Limitations
 - currently SwordExporter supports metadata in DublinCore only as Map<String, List<String>>. Metadata as XML-file is NOT supported yet.
