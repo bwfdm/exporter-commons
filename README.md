@@ -6,6 +6,8 @@ Library with common classes and interfaces for the data export (e.g. to some rep
 
 - [SwordExporter.java](src/main/java/bwfdm/exporter/commons/SwordExporter.java) - an abstract class with general exporting methods for SWORD-based repositories (e.g. DSpace, Dataverse etc.), SWORDv2 is supported for now. 
 
+For changes history please see [CHANGELOG.md](CHANGELOG.md)
+
 ## How to add to your maven project (as dependency im pom.xml)
 
 ```
