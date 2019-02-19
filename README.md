@@ -8,13 +8,13 @@ Library with common classes and interfaces for the data export (e.g. to some rep
 
 For changes history please see [CHANGELOG.md](CHANGELOG.md)
 
-## How to add to your maven project (as dependency im pom.xml)
+## How to add to your maven project (as dependency in pom.xml)
 
 ```
 <dependency>
     <groupId>com.github.bwfdm</groupId>
     <artifactId>exporter-commons</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>  
 ```
 
