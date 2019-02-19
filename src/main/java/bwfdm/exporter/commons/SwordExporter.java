@@ -255,6 +255,7 @@ public abstract class SwordExporter {
 	 * @param collectionUrl a collection URL, must have a "/swordv2/collection/" substring inside
 	 * @return {@link Map} of entries, where key = entry URL (with "/swordv2/edit/" substring inside), 
 	 * 					value = entry title. If there are not available entries, the map will be also empty.
+	 * 					Returns {@code null} in case of error.
 	 */
 	public abstract Map<String, String> getCollectionEntries(String collectionUrl);
 
@@ -381,8 +382,31 @@ public abstract class SwordExporter {
 				DepositReceipt receipt = swordClient.deposit(exportURL, deposit, authCredentials);
 				return receipt; // returns Deposit Receipt instance;
 			case REPLACE:
-				SwordResponse response = swordClient.replace(exportURL, deposit, authCredentials);
-				return response; //returns the Sword response
+				if (deposit.getEntryPart() != null) {
+					// Use "replace" method for EntryPart (metadata as Map)
+					SwordResponse response = swordClient.replace(exportURL, deposit, authCredentials);
+					return response;
+				} else {
+					// Use "replace" method for Media (metadata as XML-file)
+
+					// TODO: create issue for SWORD-Client to consider the header "In-Progress:
+					// true" for "replaceMedia()" method
+					// -> https://github.com/swordapp/JavaClient2.0/issues
+					//
+					// Code area, file "org.swordapp.client.SWORDClient.java", lines 464-468:
+					//
+					// // add the headers specific to a binary only deposit
+					// http.addContentDisposition(options, deposit.getFilename());
+					// http.addContentMd5(options, deposit.getMd5());
+					// http.addPackaging(options, deposit.getPackaging());
+					// http.addMetadataRelevant(options, deposit.isMetadataRelevant());
+					//
+					// Add new line:
+					// http.addInProgress(options, deposit.isInProgress());
+					//
+					SwordResponse response = swordClient.replaceMedia(exportURL, deposit, authCredentials);
+					return response;
+				}				
 			default:
 				log.error("Wrong SWORD-request type: {} : Supported here types are: {}, {}",
 						swordRequestType, SwordRequestType.DEPOSIT, SwordRequestType.REPLACE);
