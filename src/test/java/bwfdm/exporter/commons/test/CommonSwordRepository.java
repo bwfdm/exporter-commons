@@ -78,14 +78,14 @@ public class CommonSwordRepository extends SwordExporter{
 	}
 
 	@Override
-	public String createEntryWithMetadata(String collectionURL, Map<String, List<String>> metadataMap)
+	public String createEntryWithMetadata(String collectionURL, Map<String, List<String>> metadataMap, boolean inProgress)
 			throws SWORDClientException {
 		throw new UnsupportedOperationException("CommonSwordRepository: not implemented method.");
 	}
 
 	@Override
 	public String createEntryWithMetadataAndFile(String collectionURL, File file, boolean unpackZip,
-			Map<String, List<String>> metadataMap) throws IOException, SWORDClientException {
+			Map<String, List<String>> metadataMap, boolean inProgress) throws IOException, SWORDClientException {
 		throw new UnsupportedOperationException("CommonSwordRepository: not implemented method.");
 	}
 	
