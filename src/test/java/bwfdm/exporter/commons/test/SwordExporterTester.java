@@ -204,7 +204,7 @@ public class SwordExporterTester {
 		output += "\n" + "== Replace metadata for the entry: \n";
 		output += "Entry: " + metadataReplacementEntryUrl + "\n";
 		try {
-			swordRepository.replaceMetadataEntry(metadataReplacementEntryUrl, metadataMap);
+			swordRepository.replaceMetadataEntry(metadataReplacementEntryUrl, metadataMap, true);
 			output += "Replacement result: successful! \n";
 		} catch (SWORDClientException e) {
 			output += "Replacement result: not successful! Exception: " + e.getMessage() + "\n";
