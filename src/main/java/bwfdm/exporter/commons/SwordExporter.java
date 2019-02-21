@@ -319,14 +319,13 @@ public abstract class SwordExporter {
 	 * @param file {@link File} for export
 	 * @param metadataMap {@link Map} of metadata for export
 	 * @param inProgress {@code boolean} value for the "In-Progress" header 
-	 * 		  <pre>
+	 * 		  <p>
 	 * 	      For DSpace "In-Progress: true" means, that export will be done at first to the user's workspace, 
 	 *        where further editing of the exported element is possible. And "In-Progress: false" means export directly 
 	 *        to the workflow, without a possibility of further editing.
-	 *        <pre>
+	 *        <p>
 	 *        For Dataverse for some requests only "In-Progress: false" is recommended, 
 	 *        see <a href="http://guides.dataverse.org/en/latest/api/sword.html">http://guides.dataverse.org/en/latest/api/sword.html</a>
-	 *		  <pre>
 	 *
 	 * @return {@link SwordResponse} object or {@code null} in case of error.
 	 * 		   <pre>
@@ -440,18 +439,17 @@ public abstract class SwordExporter {
 	 * @param collectionURL holds the collection URL where the metadata will be exported to
 	 * @param metadataMap holds the metadata itself
 	 * @param inProgress {@code boolean} value for the "In-Progress" header 
-	 * 		  <pre>
+	 * 		  <p>
 	 * 	      For DSpace "In-Progress: true" means, that export will be done at first to the user's workspace, 
 	 *        where further editing of the exported element is possible. And "In-Progress: false" means export directly 
 	 *        to the workflow, without a possibility of further editing.
-	 *        <pre>
+	 *        <p>
 	 *        For Dataverse for some requests only "In-Progress: false" is recommended, 
 	 *        see <a href="http://guides.dataverse.org/en/latest/api/sword.html">http://guides.dataverse.org/en/latest/api/sword.html</a>
-	 *		  <pre>
 	 * 
 	 * @return {@link String} with the entry URL which includes "/swordv2/edit/" substring inside. 
 	 * 		This URL could be used without changes for further update of the metadata 
-	 * 		(see {@link #replaceMetadataEntry(String, Map) replaceMetadataEntry(entryURL, metadataMap)}) 
+	 * 		(see {@link #replaceMetadataEntry(String, Map, boolean) replaceMetadataEntry(entryURL, metadataMap, inProgress)}) 
 	 * 		<p>
 	 * 		<b>IMPORTANT for Dataverse repository:</b> for further update/extension of the media part 
 	 * 		(e.g. uploaded files inside the dataset) please replace "/swordv2/edit/" substring inside the entry URL to 
@@ -477,18 +475,17 @@ public abstract class SwordExporter {
 	 * @param file holds a file which can contain one or multiple files
 	 * @param metadataMap holds the metadata which is necessary for the ingest
 	 * @param inProgress {@code boolean} value for the "In-Progress" header 
-	 * 		  <pre>
+	 * 		  <p>
 	 * 	      For DSpace "In-Progress: true" means, that export will be done at first to the user's workspace, 
 	 *        where further editing of the exported element is possible. And "In-Progress: false" means export directly 
 	 *        to the workflow, without a possibility of further editing.
-	 *        <pre>
+	 *        <p>
 	 *        For Dataverse for some requests only "In-Progress: false" is recommended, 
 	 *        see <a href="http://guides.dataverse.org/en/latest/api/sword.html">http://guides.dataverse.org/en/latest/api/sword.html</a>
-	 *		  <pre>
 	 *
 	 * @return {@link String} with the entry URL which includes "/swordv2/edit/" substring inside. 
 	 * 		This URL could be used without changes for further update of the metadata 
-	 * 		(see {@link #replaceMetadataEntry(String, Map) replaceMetadataEntry(entryURL, metadataMap)}) 
+	 * 		(see {@link #replaceMetadataEntry(String, Map, boolean) replaceMetadataEntry(entryURL, metadataMap, inProgress)}) 
 	 * 		<p>
 	 * 		<b>IMPORTANT for Dataverse repository:</b> for further update/extension of the media part 
 	 * 		(e.g. uploaded files inside the dataset) please replace "/swordv2/edit/" substring inside the entry URL to 
@@ -512,14 +509,13 @@ public abstract class SwordExporter {
 	 * @param url The URL where to export the zipFile to.
 	 * @param file A file that should be exported.
 	 * @param inProgress {@code boolean} value for the "In-Progress" header 
-	 * 		  <pre>
+	 * 		  <p>
 	 * 	      For DSpace "In-Progress: true" means, that export will be done at first to the user's workspace, 
 	 *        where further editing of the exported element is possible. And "In-Progress: false" means export directly 
 	 *        to the workflow, without a possibility of further editing.
-	 *        <pre>
+	 *        <p>
 	 *        For Dataverse for some requests only "In-Progress: false" is recommended, 
 	 *        see <a href="http://guides.dataverse.org/en/latest/api/sword.html">http://guides.dataverse.org/en/latest/api/sword.html</a>
-	 *		  <pre>
 	 *
 	 * TODO: uncomment later. Think about - return location link as String (with "edit" substring inside)
 	 *
@@ -535,14 +531,13 @@ public abstract class SwordExporter {
 	 * @param entryUrl The URL which points to the metadata entry, includes "/swordv2/edit/" substring inside.
 	 * @param metadataMap The metadata that will replace the old metadata.
 	 * @param inProgress {@code boolean} value for the "In-Progress" header 
-	 * 		  <pre>
+	 * 		  <p>
 	 * 	      For DSpace "In-Progress: true" means, that export will be done at first to the user's workspace, 
 	 *        where further editing of the exported element is possible. And "In-Progress: false" means export directly 
 	 *        to the workflow, without a possibility of further editing.
-	 *        <pre>
+	 *        <p>
 	 *        For Dataverse for some requests only "In-Progress: false" is recommended, 
 	 *        see <a href="http://guides.dataverse.org/en/latest/api/sword.html">http://guides.dataverse.org/en/latest/api/sword.html</a>
-	 *		  <pre>
 	 * 
 	 * @throws SWORDClientException in case of SWORD error
 	 */
