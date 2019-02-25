@@ -27,10 +27,13 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.swordapp.client.AuthCredentials;
+import org.swordapp.client.Content;
 import org.swordapp.client.Deposit;
 import org.swordapp.client.DepositReceipt;
 import org.swordapp.client.EntryPart;
@@ -233,17 +236,92 @@ public abstract class SwordExporter {
 	 */
 	public Map<String, String> getCollections(ServiceDocument serviceDocument){
 		requireNonNull(serviceDocument);
-		Map<String, String> collections = new HashMap<String, String>();
-
+		Map<String, String> collectionsMap = new HashMap<String, String>();
+		
 		for (SWORDWorkspace workspace : serviceDocument.getWorkspaces()) {
 			for (SWORDCollection collection : workspace.getCollections()) {
-				// key = full URL, value = Title
-				collections.put(collection.getHref().toString(), collection.getTitle());
+				// Check, if it is a pure collection (does not have <service> tag)
+				if(collection.getSubServices().isEmpty()) { // is collection
+					// key = full URL, value = Title
+					collectionsMap.put(collection.getHref().toString(), collection.getTitle());
+				} else { 
+					// Is a service. Get all collections inside the service (e.g. collections inside the community for DSpace)
+					Map<String, String> serviceCollectionsMap = getServiceCollections(collection.getSubServices().get(0).toString());
+					if(serviceCollectionsMap != null) {
+						collectionsMap.putAll(serviceCollectionsMap);
+					}
+				}			
 			}
 		}
-		return collections;
+		return collectionsMap;
 	}
 
+	
+	/**
+	 * Get collections from the service document (SWORDv2 protocol), which are stored inside some service.
+	 * Service document can include pure collections, and also collections with the {@code <service>..</service>} 
+	 * tag inside - e.g. for DSpace "service" tag means, that there is a community, not a collection. 
+	 * <p>
+	 * To get all collections, which are stored inside the "service", some request to the service-URL will be done.
+	 *  
+	 * @param url {@link String} URL to the service, which will be used to make a http request   
+	 * @return {@code Map<String, String>} where key = collection URL, value = collection title, 
+	 *         or {@code null} in case of error.
+	 */
+	public Map<String, String> getServiceCollections(String url){
+		requireNonNull(url);
+		Map<String, String> collectionsMap = new HashMap<String, String>();
+		
+		try {
+			// Get request on collectionUrl, same as via "curl" 
+			// e.g.: curl -i $url --user "$USER_MAIL:$USER_PASSWORD"
+			Content content = this.getSwordClient().getContent(url, SwordExporter.MIME_FORMAT_ATOM_XML, 
+					UriRegistry.PACKAGE_SIMPLE_ZIP, this.getAuthCredentials());
+			try {
+				String response = IOUtils.readStream(content.getInputStream());
+				
+				Pattern collectionPattern = Pattern.compile("<collection (.+?)</collection>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<entry>some_entry_with_other_tags_inside</entry>
+				Matcher collectionMatcher = collectionPattern.matcher(response);
+				
+				// Find all collections (with and without "service" tag)
+				while(collectionMatcher.find()) {
+					String collectionString = collectionMatcher.group(1);
+					
+					// Check, if is it a service, not a collection 
+					Pattern servicePattern = Pattern.compile("<service.*?>(.+?)</service>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<service xmlns="http://purl.org/net/sword/terms/">https://some_link</service>"
+					Matcher servciceMatcher = servicePattern.matcher(collectionString);
+					if(servciceMatcher.find()) {
+						Map<String,String> serviceCollectionsMap = getServiceCollections(servciceMatcher.group(1));
+						if(serviceCollectionsMap != null) {
+							collectionsMap.putAll(serviceCollectionsMap);
+						} else {}			
+						
+					} else {
+						// Normal pure collection, without "service" tag inside		
+						Pattern hrefPattern = Pattern.compile("href=\"(.+?)\">", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<id>https://some_link</id>"
+						Matcher hrefMatcher = hrefPattern.matcher(collectionString);
+						
+						Pattern titlePattern = Pattern.compile("<atom:title.+?>(.+?)</atom:title>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<title type="text">some_title</title>" 
+						Matcher titleMatcher = titlePattern.matcher(collectionString);
+						
+						// Find id and title
+						if(hrefMatcher.find() && titleMatcher.find()) { 
+							collectionsMap.put(hrefMatcher.group(1), titleMatcher.group(1));
+						}
+					}
+				}
+			} catch (IOException e) {
+				log.error("Exception by converting Bitstream to String: {}: {}", e.getClass().getSimpleName(), e.getMessage());
+				return null;
+			}	
+		} catch (SWORDClientException | ProtocolViolationException | SWORDError e) {
+			log.error("Exception by getting content (request) via SWORD: {}: {}", e.getClass().getSimpleName(), e.getMessage());
+			return null;
+		}
+		
+		return collectionsMap;
+	}
+	
 	
 	/**
 	 * Get available entries of the provided collection based on the the current authentication credentials.
