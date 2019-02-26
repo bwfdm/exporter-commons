@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -321,6 +322,134 @@ public abstract class SwordExporter {
 		
 		return collectionsMap;
 	}
+	
+	
+	public Map<String, String> getCollectionsWithHierarchy(ServiceDocument serviceDocument, String hierarchySeparator){
+		requireNonNull(serviceDocument);
+		requireNonNull(hierarchySeparator);
+		
+		HierarchyObject hiearchy = createHierarchy(serviceDocument);
+		if(hiearchy == null) {
+			return null;
+		}
+	
+		Map<String, String> collectionsHierarchyMap = new HashMap<String, String>();
+		
+		for (SWORDWorkspace workspace : serviceDocument.getWorkspaces()) {
+			for (SWORDCollection collection : workspace.getCollections()) {
+				String collectionHierarchy = "";
+				
+				// Check, if it is a pure collection (does not have <service> tag)
+				if(collection.getSubServices().isEmpty()) { // is collection
+					// key = full URL, value = Title
+					collectionsHierarchyMap.put(collection.getHref().toString(), collection.getTitle());
+				} else { 
+					// Is a service. Get all collections inside the service (e.g. collections inside the community for DSpace)
+					Map<String, String> serviceCollectionsMap = getServiceCollections(collection.getSubServices().get(0).toString());
+					if(serviceCollectionsMap != null) {
+						collectionsHierarchyMap.putAll(serviceCollectionsMap);
+					}
+				}			
+			}
+		}
+		
+		
+		
+		return collectionsHierarchyMap;
+	}
+	
+	//TODO: protected
+	public HierarchyObject createHierarchy(ServiceDocument serviceDocument) {
+		
+		requireNonNull(serviceDocument);
+		
+		HierarchyObject hierarchy = new HierarchyObject("", ""); // empty fields explicit for the main workspace
+		
+		for (SWORDWorkspace workspace : serviceDocument.getWorkspaces()) {
+			for (SWORDCollection collection : workspace.getCollections()) {
+								
+				// Check, if it is a pure collection (does not have <service> tag)
+				if(collection.getSubServices().isEmpty()) { // is collection
+					// key = full URL, value = Title
+					hierarchy.collections.add(new HierarchyCollectionObject(collection.getTitle(), collection.getHref().toString()));
+				} else { 
+					// Is a service. Get all collections inside the service (e.g. collections inside the community for DSpace)
+					hierarchy.services.add(createHierarchyObject(collection.getSubServices().get(0).toString()));
+				}			
+			}
+		}
+		
+		return hierarchy;
+	}
+		
+	
+	public HierarchyObject createHierarchyObject(String url) {//(HierarchyObject parentObject){
+		requireNonNull(url);
+		HierarchyObject newHierarchyObject = new HierarchyObject("", url);		
+		
+
+		try {
+			// Get request on collectionUrl, same as via "curl" 
+			// e.g.: curl -i $url --user "$USER_MAIL:$USER_PASSWORD"
+			Content content = this.getSwordClient().getContent(newHierarchyObject.serviceUrl, SwordExporter.MIME_FORMAT_ATOM_XML, 
+					UriRegistry.PACKAGE_SIMPLE_ZIP, this.getAuthCredentials());
+			try {
+				String response = IOUtils.readStream(content.getInputStream());
+				
+				Pattern collectionPattern = Pattern.compile("<collection (.+?)</collection>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<entry>some_entry_with_other_tags_inside</entry>
+				Matcher collectionMatcher = collectionPattern.matcher(response);
+				
+				// Find all collections (with and without "service" tag)
+				while(collectionMatcher.find()) {
+					String collectionString = collectionMatcher.group(1);
+					
+					// Check, if is it a service, not a collection 
+					Pattern servicePattern = Pattern.compile("<service.*?>(.+?)</service>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<service xmlns="http://purl.org/net/sword/terms/">https://some_link</service>"
+					Matcher servciceMatcher = servicePattern.matcher(collectionString);
+					if(servciceMatcher.find()) {
+						
+						// Find title and url of the service
+						Pattern serviceTitlePattern = Pattern.compile("<.+?title.+?>(.+?)</.+?title>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<atom:title type="text">service-title</atom:title>"  
+						Matcher serviceTitleMatcher = serviceTitlePattern.matcher(collectionString);
+						
+						HierarchyObject serviceObject = new HierarchyObject();						
+						serviceObject.serviceUrl = servciceMatcher.group(1);
+						if(serviceTitleMatcher.find()) {
+							serviceObject.serviceTitle = serviceTitleMatcher.group(1);
+						}
+						HierarchyObject obj = createHierarchyObject(serviceObject.serviceUrl);
+						if(obj != null) {
+							serviceObject.services.add(obj);
+						}
+						
+						newHierarchyObject.services.add(serviceObject);
+						
+					} else {
+						// Normal collection, without "service" tag inside		
+						Pattern hrefPattern = Pattern.compile("href=\"(.+?)\">", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<id>https://some_link</id>"
+						Matcher hrefMatcher = hrefPattern.matcher(collectionString);
+						
+						Pattern titlePattern = Pattern.compile("<atom:title.+?>(.+?)</atom:title>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<title type="text">some_title</title>" 
+						Matcher titleMatcher = titlePattern.matcher(collectionString);
+						
+						// Find id and title
+						if(hrefMatcher.find() && titleMatcher.find()) { 
+							newHierarchyObject.collections.add(new HierarchyCollectionObject(titleMatcher.group(1), hrefMatcher.group(1)));
+						}
+					}
+				}
+			} catch (IOException e) {
+				log.error("Exception by converting Bitstream to String: {}: {}", e.getClass().getSimpleName(), e.getMessage());
+				return null;
+			}	
+		} catch (SWORDClientException | ProtocolViolationException | SWORDError e) {
+			log.error("Exception by getting content (request) via SWORD: {}: {}", e.getClass().getSimpleName(), e.getMessage());
+			return null;
+		}
+		
+		return newHierarchyObject;
+	}
+	
 	
 	
 	/**
@@ -627,4 +756,74 @@ public abstract class SwordExporter {
 					+ e.getClass().getSimpleName() + ": " + e.getMessage());
 		}
 	}
+	
+	
+	public class HierarchyObject {
+
+		public String serviceTitle;
+		public String serviceUrl;
+		public List<HierarchyObject> services;
+		public List<HierarchyCollectionObject> collections;
+		
+		public HierarchyObject() {
+			serviceTitle = "";
+			serviceUrl = "";
+			collections = new ArrayList<HierarchyCollectionObject>();
+			services = new ArrayList<HierarchyObject>();
+		}
+		
+		public HierarchyObject(String serviceTitle, String serviceUrl) {
+			this();
+			this.serviceTitle = serviceTitle;
+			this.serviceUrl = serviceUrl;
+		}
+		
+		public List<String> getServiceTitleListForCollection(HierarchyObject obj, String collectionUrl){		
+			List<String> serviceList = new ArrayList<String>();
+			return getServiceTitleListForCollection(obj, collectionUrl, serviceList);			
+		}
+		
+		
+		private List<String> getServiceTitleListForCollection(HierarchyObject obj, String collectionHandle, List<String> serviceList) {
+						
+			for(HierarchyCollectionObject coll: obj.collections) {
+				if(coll.collectionHref.equals(collectionHandle)) {
+					serviceList.add(0, obj.serviceTitle);
+					return serviceList;
+				}
+			}
+			
+			for(HierarchyObject comm: obj.services) {
+				List<String> list = getServiceTitleListForCollection(comm, collectionHandle, serviceList);
+				if(list != null) {
+					list.add(0, obj.serviceTitle);
+					return list;
+				}				
+			}
+			
+			return null;
+		}
+	}
+	
+	
+	public class HierarchyCollectionObject {
+
+		public String collectionTitle;
+		public String collectionHref;
+		
+		public HierarchyCollectionObject() {
+			this.collectionTitle = "";
+			this.collectionHref = "";
+		}
+		
+		public HierarchyCollectionObject(String collectionTitle, String collectionHref) {
+			this.collectionTitle = collectionTitle;
+			this.collectionHref = collectionHref;
+		}
+		
+	}
+	
+	
+	
+	
 }
