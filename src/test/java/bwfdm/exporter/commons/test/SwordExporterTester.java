@@ -131,7 +131,7 @@ public class SwordExporterTester {
 	private static void testSwordRepository(CommonSwordRepository swordRepository, String serviceDocumentUrl, String metadataReplacementEntryUrl) {
 		
 		String output = "";
-		
+
 		// Files for export
 		File zipPackageFilesOnly = new File(SwordExporterTester.class.getClassLoader().getResource("testfiles/package_files_only.zip").getFile());
 		File zipPackageFilesWithMetadata = new File(SwordExporterTester.class.getClassLoader().getResource("testfiles/package_files_with_metadata.zip").getFile());
@@ -190,15 +190,19 @@ public class SwordExporterTester {
 		// User available collections
 		output += "\n" + "== User available collections:\n";
 		ServiceDocument serviceDocument = swordRepository.getServiceDocument(serviceDocumentUrl);
+		Map<String, String> collectionHierarchy = swordRepository.getCollectionsAsHierarchy(serviceDocument, "->");
 		if(serviceDocument != null) {
+			int i = 0;
 			for(Map.Entry<String, String> collection: swordRepository.getCollections(serviceDocument).entrySet()) {
-				output += collection.getValue() + "\n";
+				i++;
+				output += i + ": " + collection.getValue() + "\n";
 				output += "-- URL:  " + collection.getKey() + "\n";
+				output += "-- hierarchy:  " + collectionHierarchy.get(collection.getKey()) + "\n";
 			}
 		} else {
 			output += "Error, service document is null. Can not get collections." + "\n";
 		}
-		
+				
 		
 		// Replace metadata entry
 		output += "\n" + "== Replace metadata for the entry: \n";

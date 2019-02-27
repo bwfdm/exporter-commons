@@ -238,131 +238,73 @@ public abstract class SwordExporter {
 	public Map<String, String> getCollections(ServiceDocument serviceDocument){
 		requireNonNull(serviceDocument);
 		Map<String, String> collectionsMap = new HashMap<String, String>();
-		
-		for (SWORDWorkspace workspace : serviceDocument.getWorkspaces()) {
-			for (SWORDCollection collection : workspace.getCollections()) {
-				// Check, if it is a pure collection (does not have <service> tag)
-				if(collection.getSubServices().isEmpty()) { // is collection
-					// key = full URL, value = Title
-					collectionsMap.put(collection.getHref().toString(), collection.getTitle());
-				} else { 
-					// Is a service. Get all collections inside the service (e.g. collections inside the community for DSpace)
-					Map<String, String> serviceCollectionsMap = getServiceCollections(collection.getSubServices().get(0).toString());
-					if(serviceCollectionsMap != null) {
-						collectionsMap.putAll(serviceCollectionsMap);
-					}
-				}			
-			}
+		HierarchyObject hierarchy = this.getHierarchy(serviceDocument); //get complete hierarchy of collections and services
+		if(hierarchy != null) {
+			collectionsMap.putAll(hierarchy.getCollections());
 		}
 		return collectionsMap;
 	}
 
 	
 	/**
-	 * Get collections from the service document (SWORDv2 protocol), which are stored inside some service.
-	 * Service document can include pure collections, and also collections with the {@code <service>..</service>} 
-	 * tag inside - e.g. for DSpace "service" tag means, that there is a community, not a collection. 
+	 * Get available collections including possible hierarchical structures via SWORD v2 protocol 
+	 * based on the {@link ServiceDocument}. Separator will be used to show different structure parts. 
 	 * <p>
-	 * To get all collections, which are stored inside the "service", some request to the service-URL will be done.
-	 *  
-	 * @param url {@link String} URL to the service, which will be used to make a http request   
-	 * @return {@code Map<String, String>} where key = collection URL, value = collection title, 
-	 *         or {@code null} in case of error.
+	 * For DSpace it means: collection with related community and subcommunities 
+	 * (e.g. "community/subcommunity/subcommunity/collection", where separator is "/")  
+	 * 
+	 * @param serviceDocument service document (request for it must be done before)
+	 * @param hierarchySeparator {@link String} separator between hierarchical elements  
+	 * @return {@code Map<String, String>} where key = collection URL, value = collection with complete hierarchy
 	 */
-	public Map<String, String> getServiceCollections(String url){
-		requireNonNull(url);
-		Map<String, String> collectionsMap = new HashMap<String, String>();
-		
-		try {
-			// Get request on collectionUrl, same as via "curl" 
-			// e.g.: curl -i $url --user "$USER_MAIL:$USER_PASSWORD"
-			Content content = this.getSwordClient().getContent(url, SwordExporter.MIME_FORMAT_ATOM_XML, 
-					UriRegistry.PACKAGE_SIMPLE_ZIP, this.getAuthCredentials());
-			try {
-				String response = IOUtils.readStream(content.getInputStream());
-				
-				Pattern collectionPattern = Pattern.compile("<collection (.+?)</collection>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<entry>some_entry_with_other_tags_inside</entry>
-				Matcher collectionMatcher = collectionPattern.matcher(response);
-				
-				// Find all collections (with and without "service" tag)
-				while(collectionMatcher.find()) {
-					String collectionString = collectionMatcher.group(1);
-					
-					// Check, if is it a service, not a collection 
-					Pattern servicePattern = Pattern.compile("<service.*?>(.+?)</service>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<service xmlns="http://purl.org/net/sword/terms/">https://some_link</service>"
-					Matcher servciceMatcher = servicePattern.matcher(collectionString);
-					if(servciceMatcher.find()) {
-						Map<String,String> serviceCollectionsMap = getServiceCollections(servciceMatcher.group(1));
-						if(serviceCollectionsMap != null) {
-							collectionsMap.putAll(serviceCollectionsMap);
-						} else {}			
-						
-					} else {
-						// Normal pure collection, without "service" tag inside		
-						Pattern hrefPattern = Pattern.compile("href=\"(.+?)\">", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<id>https://some_link</id>"
-						Matcher hrefMatcher = hrefPattern.matcher(collectionString);
-						
-						Pattern titlePattern = Pattern.compile("<atom:title.+?>(.+?)</atom:title>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<title type="text">some_title</title>" 
-						Matcher titleMatcher = titlePattern.matcher(collectionString);
-						
-						// Find id and title
-						if(hrefMatcher.find() && titleMatcher.find()) { 
-							collectionsMap.put(hrefMatcher.group(1), titleMatcher.group(1));
-						}
-					}
-				}
-			} catch (IOException e) {
-				log.error("Exception by converting Bitstream to String: {}: {}", e.getClass().getSimpleName(), e.getMessage());
-				return null;
-			}	
-		} catch (SWORDClientException | ProtocolViolationException | SWORDError e) {
-			log.error("Exception by getting content (request) via SWORD: {}: {}", e.getClass().getSimpleName(), e.getMessage());
-			return null;
-		}
-		
-		return collectionsMap;
-	}
-	
-	
-	public Map<String, String> getCollectionsWithHierarchy(ServiceDocument serviceDocument, String hierarchySeparator){
+	public Map<String, String> getCollectionsAsHierarchy(ServiceDocument serviceDocument, String hierarchySeparator){
 		requireNonNull(serviceDocument);
 		requireNonNull(hierarchySeparator);
 		
-		HierarchyObject hiearchy = createHierarchy(serviceDocument);
-		if(hiearchy == null) {
-			return null;
-		}
-	
 		Map<String, String> collectionsHierarchyMap = new HashMap<String, String>();
+		Map<String, String> collectionsMap = new HashMap<String, String>();
 		
-		for (SWORDWorkspace workspace : serviceDocument.getWorkspaces()) {
-			for (SWORDCollection collection : workspace.getCollections()) {
-				String collectionHierarchy = "";
-				
-				// Check, if it is a pure collection (does not have <service> tag)
-				if(collection.getSubServices().isEmpty()) { // is collection
-					// key = full URL, value = Title
-					collectionsHierarchyMap.put(collection.getHref().toString(), collection.getTitle());
-				} else { 
-					// Is a service. Get all collections inside the service (e.g. collections inside the community for DSpace)
-					Map<String, String> serviceCollectionsMap = getServiceCollections(collection.getSubServices().get(0).toString());
-					if(serviceCollectionsMap != null) {
-						collectionsHierarchyMap.putAll(serviceCollectionsMap);
-					}
-				}			
-			}
+		// Get complete hierarchy for collections and services
+		HierarchyObject hierachy = getHierarchy(serviceDocument);
+		if(hierachy != null) {
+			collectionsMap.putAll(hierachy.getCollections()); //get all collections (without hierarchy)
 		}
 		
-		
+		// Create complete hierarchy
+		for(String collectionUrl : collectionsMap.keySet()) {
+			String serviceHierarchyString = "";
+			List<String> collectionServices = hierachy.getServiceHierarchyForCollection(collectionUrl); //get hierarchy only for one collection 
+			if(collectionServices != null) {
+				for (String serviceTitle : collectionServices) {
+					serviceHierarchyString += serviceTitle + hierarchySeparator; //String with complete hierarchy 
+				}				
+			}
+			collectionsHierarchyMap.put(collectionUrl, serviceHierarchyString + collectionsMap.get(collectionUrl));
+		}
 		
 		return collectionsHierarchyMap;
 	}
 	
-	//TODO: protected
-	public HierarchyObject createHierarchy(ServiceDocument serviceDocument) {
+	/**
+	 * Get complete hierarchy of collections and all related services as a {@link HierarchyObject}.
+	 * <p>
+	 * Service document can include pure collections, and also collections with the {@code <service>..</service>} 
+	 * tag inside - e.g. for DSpace "service" tag means, that there is a community, not a collection.
+	 * <p>
+	 * This method represents this hierarchy of collections and related services. 
+	 * The idea is similar to the DSpace v6 "hierarchy" REST-API request, 
+	 * but suitable for the service document (SWORDv2 protocol):
+	 * <a href="https://wiki.duraspace.org/display/DSDOC6x/REST+API#RESTAPI-Hierarchy">https://wiki.duraspace.org/display/DSDOC6x/REST+API#RESTAPI-Hierarchy</a>   
+	 * <p>
+	 * <b>INFO: <b>Created {@link HierarchyObject} could be stored and used later 
+	 * to get all collections and services if needed (to avoid new requests to the server)
+	 * 
+	 * @param serviceDocument service document
+	 * @return {@link HierarchyObject} object with the complete repository hierarchy
+	 */
+	public HierarchyObject getHierarchy(ServiceDocument serviceDocument) {
 		
 		requireNonNull(serviceDocument);
-		
 		HierarchyObject hierarchy = new HierarchyObject("", ""); // empty fields explicit for the main workspace
 		
 		for (SWORDWorkspace workspace : serviceDocument.getWorkspaces()) {
@@ -373,8 +315,9 @@ public abstract class SwordExporter {
 					// key = full URL, value = Title
 					hierarchy.collections.add(new HierarchyCollectionObject(collection.getTitle(), collection.getHref().toString()));
 				} else { 
-					// Is a service. Get all collections inside the service (e.g. collections inside the community for DSpace)
-					hierarchy.services.add(createHierarchyObject(collection.getSubServices().get(0).toString()));
+					// It is a service. Get all collections inside the service (e.g. collections inside the community for DSpace)
+					HierarchyObject newServiceObject = createHierarchyObject(collection.getTitle(), collection.getSubServices().get(0).toString());					
+					hierarchy.services.add(newServiceObject);
 				}			
 			}
 		}
@@ -383,20 +326,36 @@ public abstract class SwordExporter {
 	}
 		
 	
-	public HierarchyObject createHierarchyObject(String url) {//(HierarchyObject parentObject){
+	/**
+	 * Create a new {@link HierarchyObject} based on the title and URL.
+	 * Sometimes service document includes <service> tag, what means, that some extra structure is available 
+	 * (not a standard <collection>). This method investigates this "service" structure 
+	 * Internal private method, is used iteratively.
+	 * <p>
+	 * The method makes a http-request to the URL and analyses the respond to create a new {@link HierarchyObject}.
+	 * The responds looks similar to the service document, 
+	 * but could not be analyzed with standards methods for the {@link ServiceDocument}.
+	 *    
+	 * @param title title of the {@link HierarchyObject}, should be taken from the "service" tag
+	 * @param url {@link String} with the URL of the hierarchy object (from the "collection" tag)
+	 *   
+	 * @return {@link HierarchyObject} object with the hierarchy for the concrete element ("service") 
+	 * 			or {@code null} in case of error
+	 */
+	private HierarchyObject createHierarchyObject(String title, String url) {
 		requireNonNull(url);
-		HierarchyObject newHierarchyObject = new HierarchyObject("", url);		
+		HierarchyObject newHierarchyObject = new HierarchyObject(title, url);		
 		
-
 		try {
 			// Get request on collectionUrl, same as via "curl" 
 			// e.g.: curl -i $url --user "$USER_MAIL:$USER_PASSWORD"
 			Content content = this.getSwordClient().getContent(newHierarchyObject.serviceUrl, SwordExporter.MIME_FORMAT_ATOM_XML, 
 					UriRegistry.PACKAGE_SIMPLE_ZIP, this.getAuthCredentials());
+			
 			try {
 				String response = IOUtils.readStream(content.getInputStream());
 				
-				Pattern collectionPattern = Pattern.compile("<collection (.+?)</collection>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<entry>some_entry_with_other_tags_inside</entry>
+				Pattern collectionPattern = Pattern.compile("<collection (.+?)</collection>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<collection href="http://hdl.handle.net/123456789/1">...many-tags...</collection>"
 				Matcher collectionMatcher = collectionPattern.matcher(response);
 				
 				// Find all collections (with and without "service" tag)
@@ -404,35 +363,35 @@ public abstract class SwordExporter {
 					String collectionString = collectionMatcher.group(1);
 					
 					// Check, if is it a service, not a collection 
-					Pattern servicePattern = Pattern.compile("<service.*?>(.+?)</service>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<service xmlns="http://purl.org/net/sword/terms/">https://some_link</service>"
+					Pattern servicePattern = Pattern.compile("<service.+?>(.+?)</service>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<service xmlns="http://purl.org/net/sword/terms/">https://some_link</service>"
 					Matcher servciceMatcher = servicePattern.matcher(collectionString);
 					if(servciceMatcher.find()) {
-						
-						// Find title and url of the service
+						// Find service url
+						String serviceUrl = servciceMatcher.group(1);
+												
+						// Find service title
+						String serviceTitle = "";
 						Pattern serviceTitlePattern = Pattern.compile("<.+?title.+?>(.+?)</.+?title>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<atom:title type="text">service-title</atom:title>"  
 						Matcher serviceTitleMatcher = serviceTitlePattern.matcher(collectionString);
-						
-						HierarchyObject serviceObject = new HierarchyObject();						
-						serviceObject.serviceUrl = servciceMatcher.group(1);
 						if(serviceTitleMatcher.find()) {
-							serviceObject.serviceTitle = serviceTitleMatcher.group(1);
-						}
-						HierarchyObject obj = createHierarchyObject(serviceObject.serviceUrl);
-						if(obj != null) {
-							serviceObject.services.add(obj);
-						}
+							serviceTitle = serviceTitleMatcher.group(1);
+						}	
 						
-						newHierarchyObject.services.add(serviceObject);
+						// Create new hierarchy object for this service
+						HierarchyObject obj = createHierarchyObject(serviceTitle, serviceUrl);
+						if(obj != null) {
+							newHierarchyObject.services.add(obj);
+						} else {}
 						
 					} else {
 						// Normal collection, without "service" tag inside		
 						Pattern hrefPattern = Pattern.compile("href=\"(.+?)\">", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<id>https://some_link</id>"
 						Matcher hrefMatcher = hrefPattern.matcher(collectionString);
 						
-						Pattern titlePattern = Pattern.compile("<atom:title.+?>(.+?)</atom:title>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<title type="text">some_title</title>" 
+						Pattern titlePattern = Pattern.compile("<.+?title.+?>(.+?)</.+?title>", Pattern.DOTALL | Pattern.MULTILINE); //e.g. "<title type="text">some_title</title>" 
 						Matcher titleMatcher = titlePattern.matcher(collectionString);
 						
-						// Find id and title
+						// Find href and title, add collection to the new hierarchy object
 						if(hrefMatcher.find() && titleMatcher.find()) { 
 							newHierarchyObject.collections.add(new HierarchyCollectionObject(titleMatcher.group(1), hrefMatcher.group(1)));
 						}
@@ -450,7 +409,7 @@ public abstract class SwordExporter {
 		return newHierarchyObject;
 	}
 	
-	
+	//TODO: add method to check if we use a standard service document or an extended service document (with "service" tags inside the collection) 
 	
 	/**
 	 * Get available entries of the provided collection based on the the current authentication credentials.
@@ -460,6 +419,7 @@ public abstract class SwordExporter {
 	 * IMPORTANT: authentication credentials are used implicitly. Definition of the credentials is realized via the class constructor.
 	 * 
 	 * @param collectionUrl a collection URL, must have a "/swordv2/collection/" substring inside
+	 * 
 	 * @return {@link Map} of entries, where key = entry URL (with "/swordv2/edit/" substring inside), 
 	 * 					value = entry title. If there are not available entries, the map will be also empty.
 	 * 					Returns {@code null} in case of error.
@@ -758,6 +718,13 @@ public abstract class SwordExporter {
 	}
 	
 	
+	/**
+	 * Class to represent a hierarchy for collections and services.
+	 * The idea is taken from the DSpace v6, see "hierarchy" REST-API request:
+	 * <a href="https://wiki.duraspace.org/display/DSDOC6x/REST+API#RESTAPI-Hierarchy">https://wiki.duraspace.org/display/DSDOC6x/REST+API#RESTAPI-Hierarchy</a>
+	 * 
+	 * @author Volodymyr Kushnarenko
+	 */
 	public class HierarchyObject {
 
 		public String serviceTitle;
@@ -778,34 +745,82 @@ public abstract class SwordExporter {
 			this.serviceUrl = serviceUrl;
 		}
 		
-		public List<String> getServiceTitleListForCollection(HierarchyObject obj, String collectionUrl){		
-			List<String> serviceList = new ArrayList<String>();
-			return getServiceTitleListForCollection(obj, collectionUrl, serviceList);			
+		/**
+		 * Get all "services" for the current collection
+		 * 
+		 * @param collectionUrl {@link String} with the collection URL
+		 * 
+		 * @return {@code List<String>} with all related services.
+		 * <p>
+		 * <b>IMPORTANT:</b> the first service (the main "workspace" from the service document) 
+		 * will be implicitly removed from the list.   
+		 */
+		public List<String> getServiceHierarchyForCollection(String collectionUrl){		
+			List<String> serviceList = new ArrayList<String>(0);
+			serviceList = getServiceHierarchyForCollection(this, collectionUrl, serviceList);
+			if(serviceList != null) {
+				serviceList.remove(0); // remove "workspace", it is not a service what we need
+			}
+			return serviceList;
 		}
-		
-		
-		private List<String> getServiceTitleListForCollection(HierarchyObject obj, String collectionHandle, List<String> serviceList) {
-						
-			for(HierarchyCollectionObject coll: obj.collections) {
-				if(coll.collectionHref.equals(collectionHandle)) {
-					serviceList.add(0, obj.serviceTitle);
+				
+		/**
+		 * Get a hierarchy of the "services" for the current collection.
+		 * The method will be used recursively.
+		 *   
+		 * @param currentHierarchyObject currently used hierarchy object
+		 * @param collectionUrl {@link String} with the collection URL
+		 * @param serviceList {@code List<String>} with the collected "services" (titles of the {@link HierarchyObject})
+		 * 				which are collected during the recursive iteration
+		 * @return {@code List<String>} with the collected service titles for the current collection
+		 */
+		private List<String> getServiceHierarchyForCollection(HierarchyObject currentHierarchyObject, String collectionUrl, List<String> serviceList) {
+			
+			for(HierarchyCollectionObject collectionObject: currentHierarchyObject.collections) {
+				if(collectionObject.collectionHref.equals(collectionUrl)) {
+					serviceList.add(0, currentHierarchyObject.serviceTitle);
 					return serviceList;
 				}
 			}
 			
-			for(HierarchyObject comm: obj.services) {
-				List<String> list = getServiceTitleListForCollection(comm, collectionHandle, serviceList);
+			for(HierarchyObject serviceObject: currentHierarchyObject.services) {
+				List<String> list = getServiceHierarchyForCollection(serviceObject, collectionUrl, serviceList);
 				if(list != null) {
-					list.add(0, obj.serviceTitle);
+					list.add(0, currentHierarchyObject.serviceTitle);
 					return list;
 				}				
 			}
 			
 			return null;
 		}
+				
+		/**
+		 * Get all collection titles (without hierarchy) of the hierarchy object.
+		 * If hierarchy object represents a complete repository, 
+		 * the method will return all stored collections (only titles) of the repository.
+		 * 
+		 * @return {@code Map<String, String>} where key = collection URL, value = collection title (without hierarchy)
+		 */
+		public Map<String, String> getCollections(){
+			Map<String, String> collectionsMap = new HashMap<String, String>();
+			
+			for(HierarchyCollectionObject collectionObject: collections) {
+				collectionsMap.put(collectionObject.collectionHref, collectionObject.collectionTitle);
+			}			
+			for(HierarchyObject serviceObject: services) {
+				collectionsMap.putAll(serviceObject.getCollections());
+			}	
+			
+			return collectionsMap;
+		}
 	}
 	
 	
+	/**
+	 * Class to represent a collection inside the {@link HierarchyObject}
+	 * 
+	 * @author Volodymyr Kushnarenko
+	 */
 	public class HierarchyCollectionObject {
 
 		public String collectionTitle;
@@ -820,10 +835,6 @@ public abstract class SwordExporter {
 			this.collectionTitle = collectionTitle;
 			this.collectionHref = collectionHref;
 		}
-		
 	}
-	
-	
-	
-	
+		
 }
