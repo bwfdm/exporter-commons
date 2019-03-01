@@ -250,8 +250,13 @@ public abstract class SwordExporter {
 	 * Get available collections including possible hierarchical structures via SWORD v2 protocol 
 	 * based on the {@link ServiceDocument}. Separator will be used to show different structure parts. 
 	 * <p>
-	 * For DSpace it means: collection with related community and subcommunities 
+	 * E.g. for DSpace it means: collection with related communities 
 	 * (e.g. "community/subcommunity/subcommunity/collection", where separator is "/")  
+	 * <p>
+	 * <b>IMPORTANT:</b> please check before, if service document supports the "service" tag 
+	 * inside the "collection" tags - please use {@link #isServiceDocumentWithSubservices(ServiceDocument)} for that. 
+	 * If "service" tag is not supported, the return value of this method should be the same
+	 * as for {@link #getCollections(ServiceDocument)} method.
 	 * 
 	 * @param serviceDocument service document (request for it must be done before)
 	 * @param hierarchySeparator {@link String} separator between hierarchical elements  
@@ -328,8 +333,8 @@ public abstract class SwordExporter {
 	
 	/**
 	 * Create a new {@link HierarchyObject} based on the title and URL.
-	 * Sometimes service document includes <service> tag, what means, that some extra structure is available 
-	 * (not a standard <collection>). This method investigates this "service" structure 
+	 * Sometimes service document includes "service" tag, what means, that some extra structure is available 
+	 * (not a standard "collection"). This method investigates this "service" structure 
 	 * Internal private method, is used iteratively.
 	 * <p>
 	 * The method makes a http-request to the URL and analyses the respond to create a new {@link HierarchyObject}.
@@ -409,7 +414,38 @@ public abstract class SwordExporter {
 		return newHierarchyObject;
 	}
 	
-	//TODO: add method to check if we use a standard service document or an extended service document (with "service" tags inside the collection) 
+	
+	/**
+	 * Check if service document represents services and not the traditional collections.
+	 * <p>
+	 * Some repositories can provide a service document, which has a "service" tag (subservice) 
+	 * inside the "collection" tag. It means, that to get the collection items, extra request to the service URL 
+	 * will be needed.
+	 * <p>
+	 * E.g. in case of DSpace it means, that service document lists all top level communities of the repository, 
+	 * and not collections as usually. To get the collections inside the community, extra request to the service URL
+	 * will be needed.
+	 * <p>
+	 * <b>IMPORTANT:</b> if service document includes subservices, then to represent a full hierarchy of collections 
+	 * including related services the method {@link #getCollectionsAsHierarchy(ServiceDocument, String)} could be used. 
+	 *   
+	 * @param serviceDocument service document
+	 * 
+	 * @return {@code true} if service document includes subservices ("service" tag inside the "collection" tag) 
+	 *  		and {@code false} otherwise (service document includes only traditional collections)
+	 */
+	public boolean isServiceDocumentWithSubservices(ServiceDocument serviceDocument) {
+		for (SWORDWorkspace workspace : serviceDocument.getWorkspaces()) {
+			for (SWORDCollection collection : workspace.getCollections()) {							
+				// Check, if collection has a <service> tag inside (i.e. is a community in case of DSpace)
+				if(!collection.getSubServices().isEmpty()) {
+					return true;
+				}			
+			}
+		}		
+		return false;
+	}
+	
 	
 	/**
 	 * Get available entries of the provided collection based on the the current authentication credentials.

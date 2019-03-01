@@ -178,18 +178,22 @@ public class SwordExporterTester {
 		// Basic checks
 		boolean isSwordAccessible = swordRepository.isSwordAccessible(serviceDocumentUrl);
 		output += "\n" + "== Is SWORD interface accessible: " + isSwordAccessible +"\n";
-		
-		
+				
 		// Stop testing if SWORD is not accessible
 		if(!isSwordAccessible) {
 			output += "Error! SWORD API is not accessible, stop testing... \n";
 			return;
 		}
 		
+		// Get service document
+		ServiceDocument serviceDocument = swordRepository.getServiceDocument(serviceDocumentUrl);
+		
+		// Is service document with subservices inside or not
+		output += "\n" + "== Is service document with subservices: " + swordRepository.isServiceDocumentWithSubservices(serviceDocument) +"\n";
+		
 		
 		// User available collections
 		output += "\n" + "== User available collections:\n";
-		ServiceDocument serviceDocument = swordRepository.getServiceDocument(serviceDocumentUrl);
 		Map<String, String> collectionHierarchy = swordRepository.getCollectionsAsHierarchy(serviceDocument, "->");
 		if(serviceDocument != null) {
 			int i = 0;
