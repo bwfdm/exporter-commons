@@ -301,7 +301,7 @@ public abstract class SwordExporter {
 	 * but suitable for the service document (SWORDv2 protocol):
 	 * <a href="https://wiki.duraspace.org/display/DSDOC6x/REST+API#RESTAPI-Hierarchy">https://wiki.duraspace.org/display/DSDOC6x/REST+API#RESTAPI-Hierarchy</a>   
 	 * <p>
-	 * <b>INFO: <b>Created {@link HierarchyObject} could be stored and used later 
+	 * <b>INFO:</b> Created {@link HierarchyObject} could be stored and used later 
 	 * to get all collections and services if needed (to avoid new requests to the server)
 	 * 
 	 * @param serviceDocument service document

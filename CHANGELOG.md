@@ -4,6 +4,30 @@ We follow the [Semantic Versioning 2.0.0](http://semver.org/) format.
 
 
 
+## 0.3.0 - 2019-03-01
+
+#### Added
+- support of "service" tag inside the "collection" tag in the service document 
+(e.g. in case of DSpace it means, that service document represents communities and not collections. 
+To get collections in that case, further request to the service URL - URL inside the "service" tag - is needed). 
+New methods:
+  * isServiceDocumentWithSubservices(ServiceDocument serviceDocument)
+  * getHierarchy(ServiceDocument serviceDocument)
+  * getCollectionsAsHierarchy(ServiceDocument serviceDocument, String hierarchySeparator)
+- new classes "HierarchyObject" and "HierarchyCollectionObject" which represent the hierarchy of collections and services  
+
+#### Deprecated
+- none
+
+#### Removed
+- none
+
+#### Fixed
+- none
+
+
+
+
 ## 0.2.0 - 2019-02-21
 
 #### Added
