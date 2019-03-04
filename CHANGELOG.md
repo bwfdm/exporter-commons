@@ -4,6 +4,32 @@ We follow the [Semantic Versioning 2.0.0](http://semver.org/) format.
 
 
 
+## 0.4.0 - 2019-03-04
+
+#### Added
+- static method "isServiceDocumentWithSubservices(String serviceDocumentUrl, AuthCredentials authCredentials)"
+to analyze a type of the service document even before the creation of the 
+repository object 
+
+#### Deprecated
+- none
+
+#### Removed
+- exportNewEntryWithFileAndMetadata
+
+#### Fixed
+- rename of "HierarchyObject" and "HierarchyCollectionObject"
+  * HierarchyObjectSword
+  * HierarchyCollectionObjectSword
+- rename some export method:  
+  * exportNewEntryWithMetadataAndFile
+- reorder input parameters in:
+  * exportNewEntryWithMetadataAndFile(String collectionURL, Map<String, List<String>> metadataMap, File file, boolean unpackFileIfArchive)
+  * createEntryWithMetadataAndFile(String collectionURL, Map<String, List<String>> metadataMap, File file, boolean unpackZip, boolean inProgress)
+      
+
+
+
 ## 0.3.0 - 2019-03-01
 
 #### Added

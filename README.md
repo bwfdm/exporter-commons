@@ -14,7 +14,7 @@ For changes history please see [CHANGELOG.md](CHANGELOG.md)
 <dependency>
     <groupId>com.github.bwfdm</groupId>
     <artifactId>exporter-commons</artifactId>
-    <version>0.3.0</version>
+    <version>0.4.0</version>
 </dependency>  
 ```
 
