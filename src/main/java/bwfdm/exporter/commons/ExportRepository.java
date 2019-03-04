@@ -108,13 +108,15 @@ public interface ExportRepository {
 	
 	
 	/**
-	 * Export (create) a new entry with a file and metadata in some collection, which is available 
+	 * Export (create) a new entry with metadata and file in some collection, which is available 
 	 * for the current authentication credentials. Metadata are described as a {@link java.util.Map}. 
 	 * <p>
 	 * <b>IMPORTANT:</b> credentials are used implicitly. Definition of the credentials must be done in other place, 
 	 * e.g. via class constructor.
 	 * 
 	 * @param collectionURL the full URL of the collection, where the export (ingest) will be done 
+	 * @param metadataMap metadata as {@link Map}, where key = metadata field (e.g. "creator", "title", "year", ... ), 
+	 * 		value = {@link List} with the metadata field values (e.g. {"Author-1", "Author-2", ... }). 
 	 * @param file an archive file with one or more files inside (e.g. ZIP-file as a standard) or a binary file 
 	 * 			which will be exported.
 	 * @param unpackFileIfArchive should be used for archive files (e.g. ZIP). A flag which decides, 
@@ -123,25 +125,24 @@ public interface ExportRepository {
 	 * 			as a binary file ({@code false} value, new entry will include only 1 file - the exported archive
 	 * 			as a binary file). <b>NOTE:</b> if unpacking is not supported by the repository, 
 	 * 			please use {@code false} value. 
-	 * @param metadataMap metadata as {@link Map}, where key = metadata field (e.g. "creator", "title", "year", ... ), 
-	 * 		value = {@link List} with the metadata field values (e.g. {"Author-1", "Author-2", ... }). 
 	 * 
 	 * @return {@link String} with the URL of the new created entry or {@code null} in case of error.
 	 * 
 	 * @throws IOException in case of IO error
 	 */
-	public String exportNewEntryWithFileAndMetadata(String collectionURL, File file, 
-				boolean unpackFileIfArchive, Map<String, List<String>> metadataMap) throws IOException;
+	public String exportNewEntryWithMetadataAndFile(String collectionURL, Map<String, List<String>> metadataMap, 
+							File file, boolean unpackFileIfArchive) throws IOException;
 	
 	
 	/**
-	 * Export (create) a new entry with a file and metadata in some collection, which is available 
+	 * Export (create) a new entry with metadata and file in some collection, which is available 
 	 * for the current authentication credentials. Metadata are described as a xml-file.
 	 * <p>
 	 * <b>IMPORTANT:</b> credentials are used implicitly. Definition of the credentials must be done in other place, 
 	 * e.g. via class constructor.
 	 * 
 	 * @param collectionURL the full URL of the collection, where the export (ingest) will be done.
+	 * @param metadataFileXml metadata as a xml-file in dublin core (DC) format.
 	 * @param file an archive file with one or more files inside (e.g. ZIP-file as a standard) or a binary file 
 	 * 			which will be exported.
 	 * @param unpackFileIfArchive should be used for archive files (e.g. ZIP). A flag which decides, 
@@ -150,7 +151,6 @@ public interface ExportRepository {
 	 * 			as a binary file ({@code false} value, new entry will include only 1 file - the exported archive
 	 * 			as a binary file). <b>NOTE:</b> if unpacking is not supported by the repository, 
 	 * 			please use {@code false} value.
-	 * @param metadataFileXml metadata as a xml-file in dublin core (DC) format.
 	 * 
 	 * @return {@link String} with the URL of the new created entry or {@code null} in case of error.
 	 * 
@@ -158,7 +158,7 @@ public interface ExportRepository {
 	 */
 	//TODO: activate in future releases
 	//TODO: differentiate between dublin core (DC) and METS formats
-	//public String exportNewEntryWithFileAndMetadata(String collectionURL, File file, 
-	//			boolean unpackFileIfArchive, File metadataFileXml) throws IOException;
+	//public String exportNewEntryWithMetadataAndFile(String collectionURL, File metadataFileXml, 
+	//			File file, boolean unpackFileIfArchive, ) throws IOException;
 	
 }

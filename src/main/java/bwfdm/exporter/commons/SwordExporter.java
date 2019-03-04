@@ -61,7 +61,10 @@ import bwfdm.exporter.commons.utils.IOUtils;
  */
 public abstract class SwordExporter {
 
-	protected static final Logger log = LoggerFactory.getLogger(SwordExporter.class);
+	private static final Logger log = LoggerFactory.getLogger(SwordExporter.class);
+	
+	private final AuthCredentials authCredentials;
+	private final SWORDClient swordClient;
 
 	public static final String APPLICATION_JSON = "application/json";
 	public static final String CONTENT_TYPE_HEADER = "Content-Type";
@@ -91,6 +94,14 @@ public abstract class SwordExporter {
 		}
 	}
 
+	
+	/* --------------
+	 * 
+	 * Static methods
+	 * 
+	 * --------------
+	 */
+	
 
 	/**
 	 * Get a file extension (without a dot) from the file name
@@ -110,7 +121,7 @@ public abstract class SwordExporter {
 
 
 	/**
-	 * Get package format basing on the file name.
+	 * Get package format based on the file name.
 	 * E.g. {@code UriRegistry.PACKAGE_SIMPLE_ZIP} or {@code UriRegistry.PACKAGE_BINARY}
 	 *
 	 * @param fileName {@link String} with the file name (not a full path)
@@ -127,7 +138,7 @@ public abstract class SwordExporter {
 	
 	
 	/**
-	 * Get package format basing on the file name and "unpackZip" flag.
+	 * Get package format based on the file name and "unpackZip" flag.
 	 * E.g. {@code UriRegistry.PACKAGE_SIMPLE_ZIP} or {@code UriRegistry.PACKAGE_BINARY}
 	 *
 	 * @param fileName {@link String} with the file name (not a full path)
@@ -209,10 +220,56 @@ public abstract class SwordExporter {
 		return new AuthCredentials(String.valueOf(apiToken), ""); // use an empty string instead of password
 	}
 
+	
+	/**
+	 * Check if service document represents subservices and not the traditional collections.
+	 * The method is static, that's why it could be used even before the creation of the repository object,
+	 * just to check, what type of service document will be returned from the repository. It helps to make
+	 * a right decision, what type of the publication repository should be chosen during its creation.
+	 * <p>
+	 * Some repositories can provide a service document, which has a "service" tag (subservice) 
+	 * inside the "collection" tag. It means, that to get the collection items, extra request to the service URL 
+	 * will be needed.
+	 * <p>
+	 * E.g. in case of DSpace it means, that service document lists all top level communities of the repository, 
+	 * and not collections as usually. To get the collections inside the community, extra request to the service URL
+	 * will be needed.
+	 * <p>
+	 * <b>IMPORTANT:</b> if service document includes subservices, then to represent a full hierarchy of collections 
+	 * including related services the method {@link #getCollectionsAsHierarchy(ServiceDocument, String)} could be used. 
+	 *   
+	 * @param serviceDocumentUrl {@link String} with the service document URL
+	 * @param authCredentials {@link AuthCredentials} object which represents authentication credentials
+	 * 
+	 * @return {@code true} if service document includes subservices (i.e. "service" tag inside the "collection" tag) 
+	 *  		and {@code false} otherwise (i.e. service document includes only traditional collections)
+	 * 
+	 * @throws SWORDClientException exception
+	 * @throws ProtocolViolationException exception
+	 */
+	public static boolean isServiceDocumentWithSubservices(String serviceDocumentUrl, AuthCredentials authCredentials)
+										throws SWORDClientException, ProtocolViolationException {
+		SWORDClient client = new SWORDClient();
+		ServiceDocument serviceDocument = client.getServiceDocument(serviceDocumentUrl, authCredentials);
+		for (SWORDWorkspace workspace : serviceDocument.getWorkspaces()) {
+			for (SWORDCollection collection : workspace.getCollections()) {							
+				// Check, if collection has a <service> tag inside (i.e. is a community in case of DSpace)
+				if(!collection.getSubServices().isEmpty()) {
+					return true;
+				}			
+			}
+		}		
+		return false;		
+	}
 
-	private final AuthCredentials authCredentials;
-	private final SWORDClient swordClient;
-
+	
+	/* ------------------
+	 * 
+	 * Non-static methods
+	 * 
+	 * ------------------
+	 */
+	
 
 	/**
 	 * Constructor, creates private final {@link SWORDClient} object and sets the authentication credentials (as private final object).
@@ -238,7 +295,7 @@ public abstract class SwordExporter {
 	public Map<String, String> getCollections(ServiceDocument serviceDocument){
 		requireNonNull(serviceDocument);
 		Map<String, String> collectionsMap = new HashMap<String, String>();
-		HierarchyObject hierarchy = this.getHierarchy(serviceDocument); //get complete hierarchy of collections and services
+		HierarchyObjectSword hierarchy = this.getHierarchy(serviceDocument); //get complete hierarchy of collections and services
 		if(hierarchy != null) {
 			collectionsMap.putAll(hierarchy.getCollections());
 		}
@@ -270,7 +327,7 @@ public abstract class SwordExporter {
 		Map<String, String> collectionsMap = new HashMap<String, String>();
 		
 		// Get complete hierarchy for collections and services
-		HierarchyObject hierachy = getHierarchy(serviceDocument);
+		HierarchyObjectSword hierachy = getHierarchy(serviceDocument);
 		if(hierachy != null) {
 			collectionsMap.putAll(hierachy.getCollections()); //get all collections (without hierarchy)
 		}
@@ -291,7 +348,7 @@ public abstract class SwordExporter {
 	}
 	
 	/**
-	 * Get complete hierarchy of collections and all related services as a {@link HierarchyObject}.
+	 * Get complete hierarchy of collections and all related services as a {@link HierarchyObjectSword}.
 	 * <p>
 	 * Service document can include pure collections, and also collections with the {@code <service>..</service>} 
 	 * tag inside - e.g. for DSpace "service" tag means, that there is a community, not a collection.
@@ -301,16 +358,16 @@ public abstract class SwordExporter {
 	 * but suitable for the service document (SWORDv2 protocol):
 	 * <a href="https://wiki.duraspace.org/display/DSDOC6x/REST+API#RESTAPI-Hierarchy">https://wiki.duraspace.org/display/DSDOC6x/REST+API#RESTAPI-Hierarchy</a>   
 	 * <p>
-	 * <b>INFO:</b> Created {@link HierarchyObject} could be stored and used later 
+	 * <b>INFO:</b> Created {@link HierarchyObjectSword} could be stored and used later 
 	 * to get all collections and services if needed (to avoid new requests to the server)
 	 * 
 	 * @param serviceDocument service document
-	 * @return {@link HierarchyObject} object with the complete repository hierarchy
+	 * @return {@link HierarchyObjectSword} object with the complete repository hierarchy
 	 */
-	public HierarchyObject getHierarchy(ServiceDocument serviceDocument) {
+	public HierarchyObjectSword getHierarchy(ServiceDocument serviceDocument) {
 		
 		requireNonNull(serviceDocument);
-		HierarchyObject hierarchy = new HierarchyObject("", ""); // empty fields explicit for the main workspace
+		HierarchyObjectSword hierarchy = new HierarchyObjectSword("", ""); // empty fields explicit for the main workspace
 		
 		for (SWORDWorkspace workspace : serviceDocument.getWorkspaces()) {
 			for (SWORDCollection collection : workspace.getCollections()) {
@@ -318,10 +375,10 @@ public abstract class SwordExporter {
 				// Check, if it is a pure collection (does not have <service> tag)
 				if(collection.getSubServices().isEmpty()) { // is collection
 					// key = full URL, value = Title
-					hierarchy.collections.add(new HierarchyCollectionObject(collection.getTitle(), collection.getHref().toString()));
+					hierarchy.collections.add(new HierarchyCollectionObjectSword(collection.getTitle(), collection.getHref().toString()));
 				} else { 
 					// It is a service. Get all collections inside the service (e.g. collections inside the community for DSpace)
-					HierarchyObject newServiceObject = createHierarchyObject(collection.getTitle(), collection.getSubServices().get(0).toString());					
+					HierarchyObjectSword newServiceObject = createHierarchyObject(collection.getTitle(), collection.getSubServices().get(0).toString());					
 					hierarchy.services.add(newServiceObject);
 				}			
 			}
@@ -332,24 +389,24 @@ public abstract class SwordExporter {
 		
 	
 	/**
-	 * Create a new {@link HierarchyObject} based on the title and URL.
+	 * Create a new {@link HierarchyObjectSword} based on the title and URL.
 	 * Sometimes service document includes "service" tag, what means, that some extra structure is available 
 	 * (not a standard "collection"). This method investigates this "service" structure 
 	 * Internal private method, is used iteratively.
 	 * <p>
-	 * The method makes a http-request to the URL and analyses the respond to create a new {@link HierarchyObject}.
+	 * The method makes a http-request to the URL and analyses the respond to create a new {@link HierarchyObjectSword}.
 	 * The responds looks similar to the service document, 
 	 * but could not be analyzed with standards methods for the {@link ServiceDocument}.
 	 *    
-	 * @param title title of the {@link HierarchyObject}, should be taken from the "service" tag
+	 * @param title title of the {@link HierarchyObjectSword}, should be taken from the "service" tag
 	 * @param url {@link String} with the URL of the hierarchy object (from the "collection" tag)
 	 *   
-	 * @return {@link HierarchyObject} object with the hierarchy for the concrete element ("service") 
+	 * @return {@link HierarchyObjectSword} object with the hierarchy for the concrete element ("service") 
 	 * 			or {@code null} in case of error
 	 */
-	private HierarchyObject createHierarchyObject(String title, String url) {
+	private HierarchyObjectSword createHierarchyObject(String title, String url) {
 		requireNonNull(url);
-		HierarchyObject newHierarchyObject = new HierarchyObject(title, url);		
+		HierarchyObjectSword newHierarchyObject = new HierarchyObjectSword(title, url);		
 		
 		try {
 			// Get request on collectionUrl, same as via "curl" 
@@ -383,7 +440,7 @@ public abstract class SwordExporter {
 						}	
 						
 						// Create new hierarchy object for this service
-						HierarchyObject obj = createHierarchyObject(serviceTitle, serviceUrl);
+						HierarchyObjectSword obj = createHierarchyObject(serviceTitle, serviceUrl);
 						if(obj != null) {
 							newHierarchyObject.services.add(obj);
 						} else {}
@@ -398,7 +455,7 @@ public abstract class SwordExporter {
 						
 						// Find href and title, add collection to the new hierarchy object
 						if(hrefMatcher.find() && titleMatcher.find()) { 
-							newHierarchyObject.collections.add(new HierarchyCollectionObject(titleMatcher.group(1), hrefMatcher.group(1)));
+							newHierarchyObject.collections.add(new HierarchyCollectionObjectSword(titleMatcher.group(1), hrefMatcher.group(1)));
 						}
 					}
 				}
@@ -447,22 +504,6 @@ public abstract class SwordExporter {
 	}
 	
 	
-	/**
-	 * Get available entries of the provided collection based on the the current authentication credentials.
-	 * E.g. for DSpace repository it means - items inside the collection. 
-	 * For Dataverse repository - datasets inside the dataverse.
-	 * <p>
-	 * IMPORTANT: authentication credentials are used implicitly. Definition of the credentials is realized via the class constructor.
-	 * 
-	 * @param collectionUrl a collection URL, must have a "/swordv2/collection/" substring inside
-	 * 
-	 * @return {@link Map} of entries, where key = entry URL (with "/swordv2/edit/" substring inside), 
-	 * 					value = entry title. If there are not available entries, the map will be also empty.
-	 * 					Returns {@code null} in case of error.
-	 */
-	public abstract Map<String, String> getCollectionEntries(String collectionUrl);
-
-
 	public AuthCredentials getAuthCredentials() {
 		return authCredentials;
 	}
@@ -631,7 +672,57 @@ public abstract class SwordExporter {
 		}
 
 	}
+	
+	
+	/**
+	 * Replaces an existing metadata entry with new metadata in the repository
+	 * 
+	 * @param entryUrl The URL which points to the metadata entry, includes "/swordv2/edit/" substring inside.
+	 * @param metadataMap The metadata that will replace the old metadata.
+	 * @param inProgress {@code boolean} value for the "In-Progress" header 
+	 * 		  <p>
+	 * 	      For DSpace "In-Progress: true" means, that export will be done at first to the user's workspace, 
+	 *        where further editing of the exported element is possible. And "In-Progress: false" means export directly 
+	 *        to the workflow, without a possibility of further editing.
+	 *        <p>
+	 *        For Dataverse for some requests only "In-Progress: false" is recommended, 
+	 *        see <a href="http://guides.dataverse.org/en/latest/api/sword.html">http://guides.dataverse.org/en/latest/api/sword.html</a>
+	 * 
+	 * @throws SWORDClientException in case of SWORD error
+	 */
+	public void replaceMetadataEntry(String entryUrl, Map<String, List<String>> metadataMap, boolean inProgress) throws SWORDClientException {
+		try {
+			exportElement(entryUrl, SwordRequestType.REPLACE, MIME_FORMAT_ATOM_XML, null, null, metadataMap, inProgress);	
+		} catch (FileNotFoundException | ProtocolViolationException | SWORDError e) {
+			throw new SWORDClientException("Exception by replacing of metadata via metadata Map: " 
+					+ e.getClass().getSimpleName() + ": " + e.getMessage());
+		}
+	}
 
+	
+	/* ----------------
+	 * 
+	 * Abstract methods
+	 * 
+	 * ----------------
+	 */
+	
+	
+	/**
+	 * Get available entries of the provided collection based on the the current authentication credentials.
+	 * E.g. for DSpace repository it means - items inside the collection. 
+	 * For Dataverse repository - datasets inside the dataverse.
+	 * <p>
+	 * IMPORTANT: authentication credentials are used implicitly. Definition of the credentials is realized via the class constructor.
+	 * 
+	 * @param collectionUrl a collection URL, must have a "/swordv2/collection/" substring inside
+	 * 
+	 * @return {@link Map} of entries, where key = entry URL (with "/swordv2/edit/" substring inside), 
+	 * 					value = entry title. If there are not available entries, the map will be also empty.
+	 * 					Returns {@code null} in case of error.
+	 */
+	public abstract Map<String, String> getCollectionEntries(String collectionUrl);
+	
 	
 	/**
 	 * Export the metadata only (without any file) to some collection.
@@ -674,9 +765,9 @@ public abstract class SwordExporter {
 	 * IMPORTANT: authentication credentials are used implicitly. Definition of the credentials is realized via the class constructor.
 	 *
 	 * @param collectionURL holds the collection URL where items will be exported to
-	 * @param unpackZip decides whether to unpack the zipfile or places the packed zip file as uploaded data
-	 * @param file holds a file which can contain one or multiple files
 	 * @param metadataMap holds the metadata which is necessary for the ingest
+	 * @param file holds a file which can contain one or multiple files
+	 * @param unpackZip decides whether to unpack the zipfile or places the packed zip file as uploaded data
 	 * @param inProgress {@code boolean} value for the "In-Progress" header 
 	 * 		  <p>
 	 * 	      For DSpace "In-Progress: true" means, that export will be done at first to the user's workspace, 
@@ -701,7 +792,7 @@ public abstract class SwordExporter {
 	 * @throws SWORDClientException in case of SWORD error
 	 * @throws IOException in case of IO error
 	 */
-	public abstract String createEntryWithMetadataAndFile(String collectionURL, File file, boolean unpackZip, Map<String, List<String>> metadataMap, boolean inProgress) throws IOException, SWORDClientException;
+	public abstract String createEntryWithMetadataAndFile(String collectionURL, Map<String, List<String>> metadataMap, File file, boolean unpackZip, boolean inProgress) throws IOException, SWORDClientException;
 
 
 	/**
@@ -728,30 +819,12 @@ public abstract class SwordExporter {
 	//public abstract void exportFile(String url, File file, boolean inProgress) throws IOException, SWORDClientException;
 	
 	
-	/**
-	 * Replaces an existing metadata entry with new metadata in the repository
+	/* ------------
 	 * 
-	 * @param entryUrl The URL which points to the metadata entry, includes "/swordv2/edit/" substring inside.
-	 * @param metadataMap The metadata that will replace the old metadata.
-	 * @param inProgress {@code boolean} value for the "In-Progress" header 
-	 * 		  <p>
-	 * 	      For DSpace "In-Progress: true" means, that export will be done at first to the user's workspace, 
-	 *        where further editing of the exported element is possible. And "In-Progress: false" means export directly 
-	 *        to the workflow, without a possibility of further editing.
-	 *        <p>
-	 *        For Dataverse for some requests only "In-Progress: false" is recommended, 
-	 *        see <a href="http://guides.dataverse.org/en/latest/api/sword.html">http://guides.dataverse.org/en/latest/api/sword.html</a>
+	 * Help classes
 	 * 
-	 * @throws SWORDClientException in case of SWORD error
+	 * ------------
 	 */
-	public void replaceMetadataEntry(String entryUrl, Map<String, List<String>> metadataMap, boolean inProgress) throws SWORDClientException {
-		try {
-			exportElement(entryUrl, SwordRequestType.REPLACE, MIME_FORMAT_ATOM_XML, null, null, metadataMap, inProgress);	
-		} catch (FileNotFoundException | ProtocolViolationException | SWORDError e) {
-			throw new SWORDClientException("Exception by replacing of metadata via metadata Map: " 
-					+ e.getClass().getSimpleName() + ": " + e.getMessage());
-		}
-	}
 	
 	
 	/**
@@ -761,21 +834,21 @@ public abstract class SwordExporter {
 	 * 
 	 * @author Volodymyr Kushnarenko
 	 */
-	public class HierarchyObject {
+	public class HierarchyObjectSword {
 
 		public String serviceTitle;
 		public String serviceUrl;
-		public List<HierarchyObject> services;
-		public List<HierarchyCollectionObject> collections;
+		public List<HierarchyObjectSword> services;
+		public List<HierarchyCollectionObjectSword> collections;
 		
-		public HierarchyObject() {
+		public HierarchyObjectSword() {
 			serviceTitle = "";
 			serviceUrl = "";
-			collections = new ArrayList<HierarchyCollectionObject>();
-			services = new ArrayList<HierarchyObject>();
+			collections = new ArrayList<HierarchyCollectionObjectSword>();
+			services = new ArrayList<HierarchyObjectSword>();
 		}
 		
-		public HierarchyObject(String serviceTitle, String serviceUrl) {
+		public HierarchyObjectSword(String serviceTitle, String serviceUrl) {
 			this();
 			this.serviceTitle = serviceTitle;
 			this.serviceUrl = serviceUrl;
@@ -806,20 +879,20 @@ public abstract class SwordExporter {
 		 *   
 		 * @param currentHierarchyObject currently used hierarchy object
 		 * @param collectionUrl {@link String} with the collection URL
-		 * @param serviceList {@code List<String>} with the collected "services" (titles of the {@link HierarchyObject})
+		 * @param serviceList {@code List<String>} with the collected "services" (titles of the {@link HierarchyObjectSword})
 		 * 				which are collected during the recursive iteration
 		 * @return {@code List<String>} with the collected service titles for the current collection
 		 */
-		private List<String> getServiceHierarchyForCollection(HierarchyObject currentHierarchyObject, String collectionUrl, List<String> serviceList) {
+		private List<String> getServiceHierarchyForCollection(HierarchyObjectSword currentHierarchyObject, String collectionUrl, List<String> serviceList) {
 			
-			for(HierarchyCollectionObject collectionObject: currentHierarchyObject.collections) {
+			for(HierarchyCollectionObjectSword collectionObject: currentHierarchyObject.collections) {
 				if(collectionObject.collectionHref.equals(collectionUrl)) {
 					serviceList.add(0, currentHierarchyObject.serviceTitle);
 					return serviceList;
 				}
 			}
 			
-			for(HierarchyObject serviceObject: currentHierarchyObject.services) {
+			for(HierarchyObjectSword serviceObject: currentHierarchyObject.services) {
 				List<String> list = getServiceHierarchyForCollection(serviceObject, collectionUrl, serviceList);
 				if(list != null) {
 					list.add(0, currentHierarchyObject.serviceTitle);
@@ -840,10 +913,10 @@ public abstract class SwordExporter {
 		public Map<String, String> getCollections(){
 			Map<String, String> collectionsMap = new HashMap<String, String>();
 			
-			for(HierarchyCollectionObject collectionObject: collections) {
+			for(HierarchyCollectionObjectSword collectionObject: collections) {
 				collectionsMap.put(collectionObject.collectionHref, collectionObject.collectionTitle);
 			}			
-			for(HierarchyObject serviceObject: services) {
+			for(HierarchyObjectSword serviceObject: services) {
 				collectionsMap.putAll(serviceObject.getCollections());
 			}	
 			
@@ -853,21 +926,21 @@ public abstract class SwordExporter {
 	
 	
 	/**
-	 * Class to represent a collection inside the {@link HierarchyObject}
+	 * Class to represent a collection inside the {@link HierarchyObjectSword}
 	 * 
 	 * @author Volodymyr Kushnarenko
 	 */
-	public class HierarchyCollectionObject {
+	public class HierarchyCollectionObjectSword {
 
 		public String collectionTitle;
 		public String collectionHref;
 		
-		public HierarchyCollectionObject() {
+		public HierarchyCollectionObjectSword() {
 			this.collectionTitle = "";
 			this.collectionHref = "";
 		}
 		
-		public HierarchyCollectionObject(String collectionTitle, String collectionHref) {
+		public HierarchyCollectionObjectSword(String collectionTitle, String collectionHref) {
 			this.collectionTitle = collectionTitle;
 			this.collectionHref = collectionHref;
 		}

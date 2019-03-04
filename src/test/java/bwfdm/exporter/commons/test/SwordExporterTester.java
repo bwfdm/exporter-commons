@@ -18,6 +18,7 @@ import javax.xml.validation.Validator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.swordapp.client.ProtocolViolationException;
 import org.swordapp.client.SWORDClientException;
 import org.swordapp.client.ServiceDocument;
 import org.w3c.dom.Document;
@@ -187,6 +188,13 @@ public class SwordExporterTester {
 		
 		// Get service document
 		ServiceDocument serviceDocument = swordRepository.getServiceDocument(serviceDocumentUrl);
+		
+		// Is service document with subservices inside or not (static method)
+		try{ 
+			output += "\n" + "== Is service document with subservices (static): " + SwordExporter.isServiceDocumentWithSubservices(serviceDocumentUrl, swordRepository.getAuthCredentials()) +"\n";
+		} catch (SWORDClientException | ProtocolViolationException e) {
+			log.error("Exception by accessing service document", e);
+		}
 		
 		// Is service document with subservices inside or not
 		output += "\n" + "== Is service document with subservices: " + swordRepository.isServiceDocumentWithSubservices(serviceDocument) +"\n";
